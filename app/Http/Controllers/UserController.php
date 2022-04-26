@@ -10,12 +10,13 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 
 class UserController extends Controller
 {
     public function generalInfo(): response
     {
-        $info = 'Login page - /login' . "<br>";
+        $info = 'Login page - /login' . Auth::user()->username . "<br>";
         $info .= 'Registration page - /register' . "<br>";
         $info .= 'admin page has prefix - /admin' . "<br>";
 
@@ -31,13 +32,20 @@ class UserController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
 
-        if(!$user || !Hash::check($validatedData['password'], $user->password)){
+        if (!$user || !Hash::check($validatedData['password'], $user->password)) {
             return new Response([
                 'message' => 'Bad try',
             ], 401);
         }
 
-        $token = $user->createToken('login_token')->plainTextToken;
+        try {
+            $token = $user->createToken('login_token')->plainTextToken;
+        }catch (\Exception $e){
+            return new Response([
+                'message' => 'you have already logged',
+                'token' => $user->tokens()
+            ], 200);
+        }
 
         /*$user = Auth::attempt([
             'email' => $validatedData['email'],
@@ -66,7 +74,7 @@ class UserController extends Controller
             'password' => Hash::make($validatedData['password'])
         ]);
 
-        $token = $user->createToken('register_token')->plainTextToken;
+        $token = $user->createToken('login_token')->plainTextToken;
 
         return new Response([
             'message' => 'data has been stored',
